@@ -1,0 +1,95 @@
+@import "tailwindcss";
+
+:root {
+  --sky: #8b5e16;
+  --sky-dark: #6e4a12;
+  --sale: #b42318;
+  --promo: #8b5e16;
+  --ink: #161412;
+  --muted: #5e5a54;
+  --pillow: #f4efe6;
+  --line: #e6e0d4;
+  --background: #ffffff;
+  --foreground: #161412;
+}
+
+@theme inline {
+  --color-sky: var(--sky);
+  --color-sky-dark: var(--sky-dark);
+  --color-sale: var(--sale);
+  --color-promo: var(--promo);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-pillow: var(--pillow);
+  --color-line: var(--line);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-outfit), Arial, Helvetica, sans-serif;
+  --font-display: var(--font-oswald), Impact, sans-serif;
+  --font-script: var(--font-script), Georgia, serif;
+}
+
+body {
+  background: #fff;
+  color: var(--ink);
+  font-family: var(--font-outfit), Arial, Helvetica, sans-serif;
+  font-size: 17px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--sky);
+  outline-offset: 2px;
+}
+
+.hero-bg {
+  background-color: #161412;
+}
+
+.input {
+  width: 100%;
+  border: 1px solid #d4d4d4;
+  background: #fff;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.875rem;
+  outline: none;
+}
+
+.input:focus {
+  border-color: var(--sky);
+}
+
+.btn-sky {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--sky);
+  color: #fff;
+  padding: 0.55rem 1.2rem;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+  transition: background 0.15s ease;
+}
+
+.btn-sky:hover {
+  background: var(--sky-dark);
+}
+
+.btn-sky:disabled {
+  opacity: 0.6;
+}
+
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  padding: 0.55rem 1.2rem;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.btn-outline:hover {
+  background: #fff;
+  color: var(--ink);
+}

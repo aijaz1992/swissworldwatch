@@ -1,0 +1,257 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum ProductStatus {
+  ACTIVE
+  DRAFT
+  ARCHIVED
+}
+
+enum Gender {
+  MEN
+  WOMEN
+  UNISEX
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  COD
+  PREPAID
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  passwordHash String
+  phone        String?
+  role         Role      @default(USER)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  orders       Order[]
+  addresses    Address[]
+  cart         Cart?
+}
+
+model Address {
+  id         String  @id @default(cuid())
+  userId     String?
+  user       User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  fullName   String
+  phone      String
+  line1      String
+  line2      String?
+  city       String
+  state      String
+  postalCode String
+  country    String  @default("India")
+  orders     Order[]
+}
+
+model Brand {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String    @default("")
+  imageUrl    String?
+  featured    Boolean   @default(false)
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String    @default("")
+  imageUrl    String?
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
+}
+
+model Collection {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String    @default("")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
+}
+
+model Product {
+  id              String         @id @default(cuid())
+  name            String
+  slug            String         @unique
+  brandId         String
+  brand           Brand          @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  categoryId      String
+  category        Category       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  collectionId    String?
+  collection      Collection?    @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+  description     String
+  details         String         @default("")
+  price           Int
+  compareAtPrice  Int?
+  sku             String         @unique
+  stock           Int            @default(0)
+  featured        Boolean        @default(false)
+  bestSeller      Boolean        @default(false)
+  isNew           Boolean        @default(false)
+  status          ProductStatus  @default(ACTIVE)
+  gender          Gender         @default(UNISEX)
+  movement        String?
+  caseMaterial    String?
+  strapMaterial   String?
+  dialColor       String?
+  caseSize        String?
+  waterResistance String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  images          ProductImage[]
+  specs           ProductSpec[]
+  cartItems       CartItem[]
+  orderItems      OrderItem[]
+
+  @@index([status, createdAt])
+  @@index([brandId])
+  @@index([categoryId])
+  @@index([gender])
+  @@index([price])
+  @@index([featured])
+  @@index([bestSeller])
+  @@index([isNew])
+}
+
+model MediaFile {
+  id         String   @id @default(cuid())
+  sourcePath String?  @unique
+  filename   String
+  mimeType   String
+  bytes      Bytes
+  createdAt  DateTime @default(now())
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  alt       String  @default("")
+  sortOrder Int     @default(0)
+  isPrimary Boolean @default(false)
+
+  @@index([productId, sortOrder])
+}
+
+model ProductSpec {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  label     String
+  value     String
+  sortOrder Int     @default(0)
+
+  @@index([productId, sortOrder])
+}
+
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String?    @unique
+  user      User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId String?    @unique
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id        String  @id @default(cuid())
+  cartId    String
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int
+
+  @@unique([cartId, productId])
+}
+
+model Order {
+  id            String        @id @default(cuid())
+  orderNumber   String        @unique
+  userId        String?
+  user          User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  email         String
+  status        OrderStatus   @default(PENDING)
+  paymentMethod PaymentMethod
+  subtotal      Int
+  discount      Int           @default(0)
+  shipping      Int           @default(0)
+  total         Int
+  addressId     String?
+  address       Address?      @relation(fields: [addressId], references: [id])
+  notes         String?
+  items         OrderItem[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([createdAt])
+  @@index([email])
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  name      String
+  sku       String
+  price     Int
+  quantity  Int
+  imageUrl  String?
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  author    String
+  rating    Int
+  body      String
+  createdAt DateTime @default(now())
+}
+
+model Faq {
+  id        String @id @default(cuid())
+  question  String
+  answer    String
+  sortOrder Int    @default(0)
+}
+
+model SiteSetting {
+  key   String @id
+  value String
+}
