@@ -1,5 +1,6 @@
 import { updateOrderStatus } from "@/actions/admin";
 import { formatMoney } from "@/lib/format";
+import { paymentMethodLabel } from "@/lib/payment";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -21,6 +22,26 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
       </Link>
       <h1 className="mt-2 text-2xl font-bold">{order.orderNumber}</h1>
       <p className="mt-1 text-sm text-neutral-500">{order.email}</p>
+      <div className="mt-3 bg-white px-4 py-3 text-sm shadow-sm">
+        <p>
+          Payment: <span className="font-medium">{paymentMethodLabel(order.paymentMethod)}</span>
+        </p>
+        {order.paymentMethod === "UPI" && (
+          <p className="mt-1">
+            UTR / transaction ID:{" "}
+            {order.paymentReference ? (
+              <span className="font-mono font-medium">{order.paymentReference}</span>
+            ) : (
+              <span className="text-sale">not submitted yet</span>
+            )}
+            {order.status === "PENDING" && (
+              <span className="mt-1 block text-xs text-neutral-500">
+                Check that {formatMoney(order.total)} was received with this UTR, then set the status to CONFIRMED.
+              </span>
+            )}
+          </p>
+        )}
+      </div>
       <form action={updateOrderStatus} className="mt-4 flex items-center gap-2">
         <input type="hidden" name="id" value={order.id} />
         <label className="text-sm" htmlFor="status">

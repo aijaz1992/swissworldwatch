@@ -1,3 +1,4 @@
+import { BrandLogo } from "@/components/brand/logo";
 import Link from "next/link";
 
 const hubs = ["Delhi", "Bangalore", "Pune", "Surat", "Ahmedabad", "Kolkata", "Hyderabad", "Lucknow", "Nagpur", "Jaipur"];
@@ -20,8 +21,9 @@ export function Footer({
     <footer className="mt-8 bg-ink text-neutral-300">
       <div className="mx-auto grid max-w-[1240px] gap-10 px-4 py-12 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <p className="font-script text-3xl leading-none text-white">Swiss World</p>
-          <p className="text-base font-semibold uppercase tracking-[0.18em] text-[#d4b06a]">Watches</p>
+          <Link href="/" aria-label="Swiss World Watch home" className="inline-block">
+            <BrandLogo className="w-[200px]" />
+          </Link>
           <p className="mt-4 text-sm leading-6 text-neutral-400">{settings.storeBlurb}</p>
           <a
             href={settings.telegram}

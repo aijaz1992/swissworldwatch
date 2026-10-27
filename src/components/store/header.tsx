@@ -1,6 +1,7 @@
 "use client";
 
 import { logoutAction, setCurrency } from "@/actions/store";
+import { BrandLogo } from "@/components/brand/logo";
 import type { Currency } from "@/lib/format";
 import Link from "next/link";
 import { useState } from "react";
@@ -128,7 +129,7 @@ export function Header({
           <button className="absolute inset-0 bg-black/40" aria-label="Close menu" onClick={() => setMenuOpen(false)} />
           <nav className="absolute left-0 top-0 flex h-full w-[min(100%,320px)] flex-col gap-1 overflow-y-auto bg-white p-5 shadow-xl" aria-label="Mobile">
             <div className="mb-3 flex items-center justify-between">
-              <p className="font-semibold">Menu</p>
+              <BrandLogo className="w-[120px]" />
               <button onClick={() => setMenuOpen(false)} aria-label="Close menu" className="text-2xl leading-none">
                 ×
               </button>
@@ -205,12 +206,8 @@ function Dropdown({ label, href, brands }: { label: string; href: string; brands
 
 function Logo() {
   return (
-    <Link href="/" className="justify-self-center flex items-center gap-2 lg:justify-self-start" aria-label="Swiss World Watch home">
-      <WatchMark />
-      <span className="leading-none">
-        <span className="block font-script text-[32px] text-neutral-900 sm:text-[38px]">Swiss World</span>
-        <span className="mt-0.5 block text-sm font-semibold uppercase tracking-[0.18em] text-sky">Watches</span>
-      </span>
+    <Link href="/" className="justify-self-center flex items-center lg:justify-self-start" aria-label="Swiss World Watch home">
+      <BrandLogo preload className="w-[150px] sm:w-[190px]" />
     </Link>
   );
 }
@@ -282,10 +279,3 @@ function CartIcon() {
   );
 }
 
-function WatchMark() {
-  return (
-    <span className="grid h-12 w-12 place-items-center rounded-full bg-ink font-display text-lg tracking-tight text-[#d4b06a]" aria-hidden>
-      SW
-    </span>
-  );
-}

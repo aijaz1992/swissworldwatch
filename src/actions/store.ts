@@ -3,6 +3,7 @@
 import { attachGuestCart, getCart, getOrCreateCart } from "@/lib/cart";
 import { clearSession, createSession, getCurrentUser, safeNextPath } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { UPI_REFERENCE_PATTERN } from "@/lib/payment";
 import { getSettings } from "@/lib/settings";
 import { compare, hash } from "bcryptjs";
 import { cookies } from "next/headers";
@@ -154,7 +155,12 @@ const checkoutSchema = z.object({
   city: z.string().trim().min(2, "Enter the city."),
   state: z.string().trim().min(2, "Enter the state."),
   postalCode: z.string().trim().min(4, "Enter the PIN code."),
-  paymentMethod: z.enum(["COD", "PREPAID"]),
+  paymentMethod: z.enum(["COD", "PREPAID", "UPI"]),
+  paymentReference: z
+    .string()
+    .trim()
+    .regex(UPI_REFERENCE_PATTERN, "Enter the UPI transaction ID / UTR exactly as shown on your receipt.")
+    .optional(),
   notes: z.string().trim().max(400).optional(),
 });
 
@@ -174,6 +180,7 @@ export async function placeOrder(_prev: FormState, formData: FormData): Promise<
     state: formData.get("state"),
     postalCode: formData.get("postalCode"),
     paymentMethod: formData.get("paymentMethod"),
+    paymentReference: formData.get("paymentReference") || undefined,
     notes: formData.get("notes") || undefined,
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
@@ -187,7 +194,7 @@ export async function placeOrder(_prev: FormState, formData: FormData): Promise<
 
   const subtotal = activeItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
   const discount =
-    parsed.data.paymentMethod === "PREPAID"
+    parsed.data.paymentMethod === "PREPAID" || parsed.data.paymentMethod === "UPI"
       ? Math.round((subtotal * settings.prepaidDiscount) / 100)
       : 0;
   const total = subtotal - discount;
@@ -231,6 +238,8 @@ export async function placeOrder(_prev: FormState, formData: FormData): Promise<
           userId: user?.id,
           email: parsed.data.email.toLowerCase(),
           paymentMethod: parsed.data.paymentMethod,
+          // UPI QR payments stay PENDING until an admin matches the UTR against the bank statement.
+          paymentReference: parsed.data.paymentMethod === "UPI" ? parsed.data.paymentReference : undefined,
           status: parsed.data.paymentMethod === "PREPAID" ? "CONFIRMED" : "PENDING",
           subtotal,
           discount,
@@ -261,4 +270,30 @@ export async function placeOrder(_prev: FormState, formData: FormData): Promise<
     if (error instanceof CheckoutError) return { error: error.message };
     throw error;
   }
+}
+
+const upiReferenceSchema = z.object({
+  orderNumber: z.string().trim().min(1),
+  paymentReference: z
+    .string()
+    .trim()
+    .regex(UPI_REFERENCE_PATTERN, "Enter the UPI transaction ID / UTR exactly as shown on your receipt."),
+});
+
+export async function submitUpiReference(_prev: FormState, formData: FormData): Promise<FormState & { ok?: boolean }> {
+  const parsed = upiReferenceSchema.safeParse({
+    orderNumber: formData.get("orderNumber"),
+    paymentReference: formData.get("paymentReference"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message };
+
+  const updated = await prisma.order.updateMany({
+    where: { orderNumber: parsed.data.orderNumber, paymentMethod: "UPI", status: "PENDING" },
+    data: { paymentReference: parsed.data.paymentReference },
+  });
+  if (updated.count !== 1) return { error: "This order can no longer be updated. Contact us on WhatsApp for help." };
+
+  revalidatePath(`/checkout/success/${parsed.data.orderNumber}`);
+  revalidatePath("/admin/orders");
+  return { ok: true };
 }

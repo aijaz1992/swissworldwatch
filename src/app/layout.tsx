@@ -20,12 +20,21 @@ const playball = Playball({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
+  applicationName: "Swiss World Watch",
   title: {
     default: "Swiss World Watch",
     template: "%s | Swiss World Watch",
   },
   description:
     "Shop Swiss automatic and quartz watches online in India. Prepaid discount, cash on delivery, and insured shipping.",
+  openGraph: {
+    type: "website",
+    siteName: "Swiss World Watch",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

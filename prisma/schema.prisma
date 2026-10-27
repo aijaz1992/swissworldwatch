@@ -37,6 +37,7 @@ enum OrderStatus {
 enum PaymentMethod {
   COD
   PREPAID
+  UPI
 }
 
 model User {
@@ -201,23 +202,25 @@ model CartItem {
 }
 
 model Order {
-  id            String        @id @default(cuid())
-  orderNumber   String        @unique
-  userId        String?
-  user          User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
-  email         String
-  status        OrderStatus   @default(PENDING)
-  paymentMethod PaymentMethod
-  subtotal      Int
-  discount      Int           @default(0)
-  shipping      Int           @default(0)
-  total         Int
-  addressId     String?
-  address       Address?      @relation(fields: [addressId], references: [id])
-  notes         String?
-  items         OrderItem[]
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id               String        @id @default(cuid())
+  orderNumber      String        @unique
+  userId           String?
+  user             User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  email            String
+  status           OrderStatus   @default(PENDING)
+  paymentMethod    PaymentMethod
+  /// UPI transaction ID / UTR submitted by the customer for UPI QR payments.
+  paymentReference String?
+  subtotal         Int
+  discount         Int           @default(0)
+  shipping         Int           @default(0)
+  total            Int
+  addressId        String?
+  address          Address?      @relation(fields: [addressId], references: [id])
+  notes            String?
+  items            OrderItem[]
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 
   @@index([createdAt])
   @@index([email])

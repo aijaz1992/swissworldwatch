@@ -1,4 +1,5 @@
 import { formatDate, formatMoney } from "@/lib/format";
+import { paymentMethodLabel } from "@/lib/payment";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 
@@ -43,7 +44,14 @@ export default async function OrdersPage() {
                   <p className="text-xs text-neutral-500">{order.email}</p>
                 </td>
                 <td className="px-3 py-3">{formatMoney(order.total)}</td>
-                <td className="px-3 py-3">{order.paymentMethod}</td>
+                <td className="px-3 py-3">
+                  {paymentMethodLabel(order.paymentMethod)}
+                  {order.paymentMethod === "UPI" && (
+                    <p className={`text-xs ${order.paymentReference ? "text-neutral-500" : "text-sale"}`}>
+                      {order.paymentReference ? `UTR ${order.paymentReference}` : "UTR pending"}
+                    </p>
+                  )}
+                </td>
                 <td className="px-3 py-3">{order.status}</td>
                 <td className="px-3 py-3">{formatDate(order.createdAt)}</td>
               </tr>

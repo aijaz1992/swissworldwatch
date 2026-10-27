@@ -2,6 +2,7 @@
 
 import { placeOrder, type FormState } from "@/actions/store";
 import { SubmitButton } from "@/components/store/submit-button";
+import { UpiPaymentPanel } from "@/components/store/upi-payment";
 import { formatMoney, type Currency } from "@/lib/format";
 import { useActionState, useState } from "react";
 
@@ -19,9 +20,9 @@ export function CheckoutForm({
   name?: string;
 }) {
   const [state, action] = useActionState<FormState, FormData>(placeOrder, {});
-  const [method, setMethod] = useState<"COD" | "PREPAID">("COD");
+  const [method, setMethod] = useState<"COD" | "PREPAID" | "UPI">("COD");
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const discount = method === "PREPAID" ? Math.round((subtotal * discountPercent) / 100) : 0;
+  const discount = method === "PREPAID" || method === "UPI" ? Math.round((subtotal * discountPercent) / 100) : 0;
 
   return (
     <form action={action} className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
@@ -55,11 +56,37 @@ export function CheckoutForm({
           </label>
           <label className="flex items-start gap-2 border border-neutral-200 p-3 text-sm">
             <input type="radio" name="paymentMethod" value="PREPAID" checked={method === "PREPAID"} onChange={() => setMethod("PREPAID")} />
-            <span>Prepaid — {discountPercent}% off (UPI, card, or netbanking)</span>
+            <span>Prepaid — {discountPercent}% off (card or netbanking)</span>
           </label>
+          <label className={`flex items-start gap-2 border p-3 text-sm ${method === "UPI" ? "border-sky" : "border-neutral-200"}`}>
+            <input type="radio" name="paymentMethod" value="UPI" checked={method === "UPI"} onChange={() => setMethod("UPI")} />
+            <span>
+              Pay via UPI / PhonePe QR — {discountPercent}% off
+              <span className="block text-xs text-neutral-500">Scan & pay with PhonePe, Google Pay, Paytm, BHIM, or any UPI app.</span>
+            </span>
+          </label>
+          {method === "UPI" && (
+            <UpiPaymentPanel amount={subtotal - discount}>
+              <label className="block text-sm">
+                <span className="mb-1 block font-medium">UPI transaction ID / UTR</span>
+                <input
+                  className="input"
+                  name="paymentReference"
+                  inputMode="text"
+                  autoComplete="off"
+                  pattern="[A-Za-z0-9]{8,30}"
+                  title="8–30 letters or digits, e.g. the 12-digit UTR from your UPI receipt"
+                  placeholder="e.g. 412345678901"
+                />
+                <span className="mt-1 block text-xs text-neutral-500">
+                  Paid already? Enter the UTR now. Otherwise place the order and add it on the next page. We dispatch once the payment is verified.
+                </span>
+              </label>
+            </UpiPaymentPanel>
+          )}
         </fieldset>
         <SubmitButton className="btn-sky w-full py-3" pendingLabel="Placing order…">
-          Place order
+          {method === "UPI" ? "Place order & pay via UPI" : "Place order"}
         </SubmitButton>
       </div>
       <aside className="h-fit border border-neutral-200 p-5">
@@ -84,7 +111,7 @@ export function CheckoutForm({
             <dd>Free</dd>
           </div>
           <div className="flex justify-between text-emerald-700">
-            <dt>Prepaid discount</dt>
+            <dt>{method === "UPI" ? "UPI prepaid discount" : "Prepaid discount"}</dt>
             <dd>{discount ? `−${formatMoney(discount, currency)}` : formatMoney(0, currency)}</dd>
           </div>
           <div className="flex justify-between text-base font-semibold">

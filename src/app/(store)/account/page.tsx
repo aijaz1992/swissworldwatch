@@ -1,6 +1,7 @@
 import { logoutAction } from "@/actions/store";
 import { getCurrentUser } from "@/lib/auth";
 import { formatDate, formatMoney } from "@/lib/format";
+import { paymentMethodLabel } from "@/lib/payment";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -45,8 +46,13 @@ export default async function AccountPage() {
                 <p>{formatMoney(order.total)}</p>
               </div>
               <p className="mt-1 text-neutral-500">
-                {formatDate(order.createdAt)} · {order.status} · {order.paymentMethod}
+                {formatDate(order.createdAt)} · {order.status} · {paymentMethodLabel(order.paymentMethod)}
               </p>
+              {order.paymentMethod === "UPI" && order.status === "PENDING" && (
+                <Link href={`/checkout/success/${order.orderNumber}`} className="mt-1 inline-block text-sky underline">
+                  {order.paymentReference ? "UPI payment under verification" : "Complete UPI payment"}
+                </Link>
+              )}
               <p className="mt-1 text-neutral-600">{order.items.map((item) => item.name).join(", ")}</p>
             </li>
           ))}
