@@ -1,3 +1,4 @@
+import { BrandMarquee } from "@/components/store/brand-marquee";
 import { HeroVideo } from "@/components/store/hero-video";
 import { ProductCard } from "@/components/store/product-card";
 import { productCardInclude } from "@/lib/catalog";
@@ -120,18 +121,7 @@ export default async function HomePage() {
           <SectionHeading href="/watches" action="View all">
             Brands
           </SectionHeading>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-            {brands.map((brand) => (
-              <Link key={brand.id} href={`/watches/${brand.slug}`} className="group relative block aspect-square overflow-hidden bg-neutral-200">
-                {brand.imageUrl && (
-                  <Image src={brand.imageUrl} alt="" fill sizes="(max-width: 768px) 50vw, 16vw" className="object-cover transition duration-300 group-hover:scale-105" />
-                )}
-                <span className="absolute inset-x-0 bottom-0 bg-ink/80 px-3 py-3 text-center text-base font-medium text-white">
-                  {brand.name}
-                </span>
-              </Link>
-            ))}
-          </div>
+          <BrandMarquee brands={brands} />
           <h3 className="mt-12 text-2xl font-semibold tracking-tight">Shop by category</h3>
           <div className="mt-5 flex flex-wrap gap-3">
             {categories.map((category) => (
