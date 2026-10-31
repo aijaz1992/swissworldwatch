@@ -24,6 +24,7 @@ export type CatalogFilters = {
   q?: string;
   brand?: string;
   category?: string;
+  collection?: string;
   gender?: Gender;
   min?: number;
   max?: number;
@@ -59,6 +60,7 @@ export function parseFilters(params: RawParams, locked: Partial<CatalogFilters> 
     q: one(params.q),
     brand: locked.brand ?? one(params.brand),
     category: locked.category ?? one(params.category),
+    collection: locked.collection ?? one(params.collection),
     gender: locked.gender ?? gender,
     min: Number.isFinite(min) && min > 0 ? min : undefined,
     max: Number.isFinite(max) && max > 0 ? max : undefined,
@@ -77,6 +79,7 @@ export function filtersToQuery(filters: CatalogFilters, overrides: Partial<Catal
   if (merged.q) params.set("q", merged.q);
   if (merged.brand) params.set("brand", merged.brand);
   if (merged.category) params.set("category", merged.category);
+  if (merged.collection) params.set("collection", merged.collection);
   if (merged.gender) params.set("gender", merged.gender);
   if (merged.min) params.set("min", String(merged.min));
   if (merged.max) params.set("max", String(merged.max));
@@ -109,6 +112,7 @@ export const queryProducts = cached(async (filters: CatalogFilters) => {
   }
   if (filters.brand) where.brand = { slug: filters.brand };
   if (filters.category) where.category = { slug: filters.category };
+  if (filters.collection) where.collection = { slug: filters.collection };
   if (filters.gender) where.gender = filters.gender;
   if (filters.movement) where.movement = { contains: filters.movement, mode: "insensitive" };
   if (filters.availability === "in") where.stock = { gt: 0 };
@@ -170,7 +174,7 @@ export const getTaxonomyBySlug = cached(async (slug: string) => {
 /** Brand and category names for navigation and filters (cached). */
 export const getNavTaxonomy = cached(async () => {
   const [brands, categories] = await Promise.all([
-    prisma.brand.findMany({ orderBy: { sortOrder: "asc" }, select: { name: true, slug: true } }),
+    prisma.brand.findMany({ orderBy: { sortOrder: "asc" }, select: { name: true, slug: true, featured: true } }),
     prisma.category.findMany({ orderBy: { sortOrder: "asc" }, select: { name: true, slug: true } }),
   ]);
   return { brands, categories };

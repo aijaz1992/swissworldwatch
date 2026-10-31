@@ -3,6 +3,7 @@
 import { logoutAction, setCurrency } from "@/actions/store";
 import { BrandLogo } from "@/components/brand/logo";
 import type { Currency } from "@/lib/format";
+import { NAV_MENUS, type NavMenu } from "@/lib/nav-menu";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -12,7 +13,6 @@ export function Header({
   promoText,
   phone,
   hours,
-  brands,
   categories = [],
   cartCount,
   user,
@@ -21,7 +21,7 @@ export function Header({
   promoText: string;
   phone: string;
   hours: string;
-  brands: LinkItem[];
+  brands?: LinkItem[];
   categories?: LinkItem[];
   cartCount: number;
   user: { name: string; role: "USER" | "ADMIN" } | null;
@@ -83,9 +83,9 @@ export function Header({
           </button>
           <Logo />
           <nav className="hidden items-center gap-4 xl:flex" aria-label="Primary">
-            <Dropdown label="Men's Watches" href="/watches?gender=MEN" brands={brands} />
-            <Dropdown label="Women's Watches" href="/watches?gender=WOMEN" brands={brands} />
-            <Dropdown label="Brands" href="/watches" brands={brands} />
+            {NAV_MENUS.map((menu) => (
+              <MegaMenu key={menu.label} menu={menu} />
+            ))}
             <Link href="/about" className="text-base text-neutral-800 hover:text-sky">
               About us
             </Link>
@@ -136,12 +136,9 @@ export function Header({
                 ×
               </button>
             </div>
-            <MobileLink href="/watches?gender=MEN" onClick={() => setMenuOpen(false)}>
-              Men&apos;s Watches
-            </MobileLink>
-            <MobileLink href="/watches?gender=WOMEN" onClick={() => setMenuOpen(false)}>
-              Women&apos;s Watches
-            </MobileLink>
+            {NAV_MENUS.map((menu) => (
+              <MobileSection key={menu.label} menu={menu} onNavigate={() => setMenuOpen(false)} />
+            ))}
             <MobileLink href="/about" onClick={() => setMenuOpen(false)}>
               About us
             </MobileLink>
@@ -161,12 +158,6 @@ export function Header({
                 ))}
               </>
             )}
-            <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-neutral-400">Brands</p>
-            {brands.map((brand) => (
-              <MobileLink key={brand.slug} href={`/watches/${brand.slug}`} onClick={() => setMenuOpen(false)}>
-                {brand.name}
-              </MobileLink>
-            ))}
             <div className="mt-4 border-t pt-4">
               {user ? (
                 <>
@@ -195,24 +186,59 @@ export function Header({
   );
 }
 
-function Dropdown({ label, href, brands }: { label: string; href: string; brands: LinkItem[] }) {
+function MegaMenu({ menu }: { menu: NavMenu }) {
+  const wide = menu.items.length > 20;
   return (
     <div className="group relative">
-      <Link href={href} className="inline-flex items-center gap-1 text-base text-neutral-800 hover:text-sky">
-        {label}
+      <Link href={menu.href} className="inline-flex items-center gap-1 py-2 text-base text-neutral-800 hover:text-[#a8843f]">
+        {menu.label}
         <Chevron />
       </Link>
-      <div className="invisible absolute left-0 top-full z-50 min-w-56 border border-neutral-200 bg-white py-2 opacity-0 shadow-lg transition group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
-        <Link href={href} className="block px-4 py-2 text-sm font-medium hover:bg-sky/10">
-          View all
-        </Link>
-        {brands.map((brand) => (
-          <Link key={brand.slug} href={`/watches/${brand.slug}`} className="block px-4 py-2 text-sm hover:bg-sky/10">
-            {brand.name}
+      <div
+        className={`invisible absolute top-full z-50 border-t-2 border-[#d4b06a] bg-[#0b1b33] p-5 text-white opacity-0 shadow-2xl transition group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 ${
+          wide ? "left-0 w-[760px]" : "left-0 w-[520px]"
+        }`}
+      >
+        <div className="mb-3 flex items-center justify-between border-b border-white/10 pb-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#d4b06a]">{menu.label}</p>
+          <Link href={menu.href} className="text-xs font-medium text-white/80 hover:text-[#d4b06a]">
+            View all →
           </Link>
-        ))}
+        </div>
+        <ul className={`grid gap-x-6 ${wide ? "grid-cols-4" : "grid-cols-2"}`}>
+          {menu.items.map((item) => (
+            <li key={item.href}>
+              <Link href={item.href} className="block py-1.5 text-sm text-white/85 transition-colors hover:text-[#d4b06a]">
+                {item.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
+  );
+}
+
+function MobileSection({ menu, onNavigate }: { menu: NavMenu; onNavigate: () => void }) {
+  return (
+    <details className="group -mx-2 border-b border-neutral-100">
+      <summary className="flex cursor-pointer list-none items-center justify-between rounded-sm px-2 py-2 text-sm font-medium text-neutral-900 [&::-webkit-details-marker]:hidden">
+        {menu.label}
+        <span className="text-[#a8843f] transition-transform group-open:rotate-180">
+          <Chevron />
+        </span>
+      </summary>
+      <div className="flex flex-col pb-2 pl-4">
+        <MobileLink href={menu.href} onClick={onNavigate}>
+          View all
+        </MobileLink>
+        {menu.items.map((item) => (
+          <MobileLink key={item.href} href={item.href} onClick={onNavigate}>
+            {item.label}
+          </MobileLink>
+        ))}
+      </div>
+    </details>
   );
 }
 

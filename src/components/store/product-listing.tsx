@@ -16,7 +16,7 @@ export async function ProductListing({
   const brands = [...nav.brands].sort((a, b) => a.name.localeCompare(b.name));
   const categories = nav.categories;
   const clearable = Boolean(
-    filters.q || filters.brand || filters.category || filters.gender || filters.min || filters.max || filters.availability || filters.sale || filters.movement,
+    filters.q || filters.brand || filters.category || filters.collection || filters.gender || filters.min || filters.max || filters.availability || filters.sale || filters.movement,
   );
 
   return (
@@ -51,7 +51,20 @@ export async function ProductListing({
               </Link>
             </div>
           )}
-          <ProductGrid products={products} />
+          {total === 0 && (filters.brand || filters.collection) && !filters.q ? (
+            <div className="border border-dashed border-[#d4b06a]/60 bg-[#0b1b33]/[0.03] px-6 py-16 text-center">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#a8843f]">Coming soon</p>
+              <p className="mt-3 text-lg font-semibold text-neutral-900">New pieces are arriving shortly</p>
+              <p className="mx-auto mt-2 max-w-md text-sm text-neutral-500">
+                We are adding watches to this collection. Message us on WhatsApp for current availability, or browse our full range.
+              </p>
+              <Link href="/watches" className="btn-sky mt-5">
+                Browse all watches
+              </Link>
+            </div>
+          ) : (
+            <ProductGrid products={products} />
+          )}
           {pageCount > 1 && (
             <nav className="mt-10 flex justify-center gap-2" aria-label="Pagination">
               {Array.from({ length: pageCount }, (_, index) => {

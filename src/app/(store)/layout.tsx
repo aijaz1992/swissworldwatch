@@ -34,7 +34,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
       <main id="content" className="flex-1">
         {children}
       </main>
-      <Footer settings={settings} brands={brands} categories={categories} />
+      <Footer settings={settings} brands={brands.filter((brand) => brand.featured)} categories={categories} />
       <WhatsAppButton phone={settings.whatsapp} />
     </div>
   );
