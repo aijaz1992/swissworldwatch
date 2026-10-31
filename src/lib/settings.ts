@@ -20,7 +20,12 @@ export const settingDefaults = {
 export type SettingKey = keyof typeof settingDefaults;
 
 export async function getSettings() {
-  const rows = await prisma.siteSetting.findMany();
+  let rows: { key: string; value: string }[] = [];
+  try {
+    rows = await prisma.siteSetting.findMany();
+  } catch (error) {
+    console.error("[settings] falling back to defaults", error);
+  }
   const map = Object.fromEntries(rows.map((row) => [row.key, row.value]));
   const merged = { ...settingDefaults, ...map };
   return {

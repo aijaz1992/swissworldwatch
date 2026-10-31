@@ -4,16 +4,17 @@ import { getCurrentUser } from "@/lib/auth";
 import { cartCount, getCart } from "@/lib/cart";
 import { prisma } from "@/lib/prisma";
 import { getCurrency, getSettings } from "@/lib/settings";
+import { safe } from "@/lib/safe";
 
 export const dynamic = "force-dynamic";
 
 export default async function StoreLayout({ children }: { children: React.ReactNode }) {
   const [settings, brands, categories, cart, user, currency] = await Promise.all([
     getSettings(),
-    prisma.brand.findMany({ orderBy: { sortOrder: "asc" }, select: { name: true, slug: true } }),
-    prisma.category.findMany({ orderBy: { sortOrder: "asc" }, select: { name: true, slug: true } }),
-    getCart(),
-    getCurrentUser(),
+    safe(prisma.brand.findMany({ orderBy: { sortOrder: "asc" }, select: { name: true, slug: true } }), [], "layout brands"),
+    safe(prisma.category.findMany({ orderBy: { sortOrder: "asc" }, select: { name: true, slug: true } }), [], "layout categories"),
+    safe(getCart(), null, "layout cart"),
+    safe(getCurrentUser(), null, "layout user"),
     getCurrency(),
   ]);
 
