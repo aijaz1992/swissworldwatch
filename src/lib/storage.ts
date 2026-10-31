@@ -6,7 +6,7 @@ const ALLOWED = new Map([
   ["image/webp", ".webp"],
 ]);
 
-export async function saveUploadedImage(file: File) {
+async function saveUploadedImage(file: File) {
   if (!file || file.size === 0) return null;
   const extension = ALLOWED.get(file.type);
   if (!extension) {

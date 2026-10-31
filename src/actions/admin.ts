@@ -7,6 +7,7 @@ import { uniquePublicSlug } from "@/lib/slug";
 import { saveUploadedImages } from "@/lib/storage";
 import type { Gender, OrderStatus, ProductStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { refreshCatalog } from "@/lib/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
@@ -148,7 +149,7 @@ export async function createProduct(_prev: FormState, formData: FormData): Promi
     throw error;
   }
 
-  revalidatePath("/", "layout");
+  refreshCatalog();
   redirect("/admin/products");
 }
 
@@ -187,7 +188,7 @@ export async function updateProduct(_prev: FormState, formData: FormData): Promi
     throw error;
   }
 
-  revalidatePath("/", "layout");
+  refreshCatalog();
   redirect("/admin/products");
 }
 
@@ -195,7 +196,7 @@ export async function deleteProduct(formData: FormData) {
   await requireAdmin();
   const id = String(formData.get("id") ?? "");
   await prisma.product.delete({ where: { id } });
-  revalidatePath("/", "layout");
+  refreshCatalog();
   redirect("/admin/products");
 }
 
@@ -220,7 +221,7 @@ export async function createBrand(_prev: FormState, formData: FormData): Promise
       featured: formData.get("featured") === "on",
     },
   });
-  revalidatePath("/", "layout");
+  refreshCatalog();
   return { ok: true };
 }
 
@@ -230,7 +231,7 @@ export async function deleteBrand(formData: FormData) {
   const count = await prisma.product.count({ where: { brandId: id } });
   if (count > 0) redirect("/admin/categories?error=in-use");
   await prisma.brand.delete({ where: { id } });
-  revalidatePath("/", "layout");
+  refreshCatalog();
 }
 
 async function readCategoryImage(formData: FormData, current: string | null = null) {
@@ -274,7 +275,7 @@ export async function createCategory(_prev: FormState, formData: FormData): Prom
       sortOrder: (last._max.sortOrder ?? 0) + 1,
     },
   });
-  revalidatePath("/", "layout");
+  refreshCatalog();
   return { ok: true };
 }
 
@@ -304,7 +305,7 @@ export async function updateCategory(_prev: FormState, formData: FormData): Prom
       ...(Number.isFinite(sortOrder) ? { sortOrder } : {}),
     },
   });
-  revalidatePath("/", "layout");
+  refreshCatalog();
   return { ok: true };
 }
 
@@ -314,7 +315,7 @@ export async function deleteCategory(formData: FormData) {
   const count = await prisma.product.count({ where: { categoryId: id } });
   if (count > 0) redirect("/admin/categories?error=in-use");
   await prisma.category.delete({ where: { id } });
-  revalidatePath("/", "layout");
+  refreshCatalog();
 }
 
 export async function createCollection(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -328,7 +329,7 @@ export async function createCollection(_prev: FormState, formData: FormData): Pr
   await prisma.collection.create({
     data: { name: parsed.data.name, slug, description: parsed.data.description ?? "" },
   });
-  revalidatePath("/", "layout");
+  refreshCatalog();
   return { ok: true };
 }
 
@@ -336,7 +337,7 @@ export async function deleteCollection(formData: FormData) {
   await requireAdmin();
   const id = String(formData.get("id") ?? "");
   await prisma.collection.delete({ where: { id } });
-  revalidatePath("/", "layout");
+  refreshCatalog();
 }
 
 export async function updateOrderStatus(formData: FormData) {
@@ -390,7 +391,7 @@ export async function updateSettings(_prev: FormState, formData: FormData): Prom
     ),
   );
 
-  revalidatePath("/", "layout");
+  refreshCatalog();
   return { ok: true };
 }
 

@@ -8,6 +8,7 @@ import { getSettings } from "@/lib/settings";
 import { compare, hash } from "bcryptjs";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { refreshCatalog } from "@/lib/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
@@ -264,7 +265,7 @@ export async function placeOrder(_prev: FormState, formData: FormData): Promise<
       return number;
     });
 
-    revalidatePath("/", "layout");
+    refreshCatalog();
     redirect(`/checkout/success/${orderNumber}`);
   } catch (error) {
     if (error instanceof CheckoutError) return { error: error.message };

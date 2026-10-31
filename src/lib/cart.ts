@@ -3,9 +3,9 @@ import { getSession } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
 import { cookies } from "next/headers";
 
-export const CART_COOKIE = "sww_cart";
+const CART_COOKIE = "sww_cart";
 
-export const cartInclude = {
+const cartInclude = {
   items: {
     include: {
       product: {

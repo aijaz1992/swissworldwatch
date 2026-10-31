@@ -1,3 +1,4 @@
+import { cached } from "@/lib/cache";
 import { prisma } from "@/lib/prisma";
 import { Prisma, type Gender } from "@prisma/client";
 
@@ -91,7 +92,7 @@ export function filtersToQuery(filters: CatalogFilters, overrides: Partial<Catal
 
 const PAGE_SIZE = 12;
 
-export async function queryProducts(filters: CatalogFilters) {
+export const queryProducts = cached(async (filters: CatalogFilters) => {
   const where: Prisma.ProductWhereInput = { status: "ACTIVE" };
   let min = filters.min;
   let max = filters.max;
@@ -146,16 +147,36 @@ export async function queryProducts(filters: CatalogFilters) {
     pageSize: PAGE_SIZE,
     pageCount: Math.max(1, Math.ceil(total / PAGE_SIZE)),
   };
-}
+}, "query-products");
 
-export async function getProductBySlug(slug: string) {
-  return prisma.product.findFirst({
-    where: { slug, status: "ACTIVE" },
-    include: productDetailInclude,
-  });
-}
+export const getProductBySlug = cached(
+  (slug: string) =>
+    prisma.product.findFirst({
+      where: { slug, status: "ACTIVE" },
+      include: productDetailInclude,
+    }),
+  "product-by-slug",
+);
 
-export async function getRelatedProducts(product: { id: string; categoryId: string; brandId: string }) {
+/** Resolves a /watches/[slug] URL to a brand or category (cached). */
+export const getTaxonomyBySlug = cached(async (slug: string) => {
+  const brand = await prisma.brand.findUnique({ where: { slug }, select: { name: true, slug: true, description: true } });
+  if (brand) return { kind: "brand" as const, ...brand };
+  const category = await prisma.category.findUnique({ where: { slug }, select: { name: true, slug: true, description: true } });
+  if (category) return { kind: "category" as const, ...category };
+  return null;
+}, "taxonomy-by-slug");
+
+/** Brand and category names for navigation and filters (cached). */
+export const getNavTaxonomy = cached(async () => {
+  const [brands, categories] = await Promise.all([
+    prisma.brand.findMany({ orderBy: { sortOrder: "asc" }, select: { name: true, slug: true } }),
+    prisma.category.findMany({ orderBy: { sortOrder: "asc" }, select: { name: true, slug: true } }),
+  ]);
+  return { brands, categories };
+}, "nav-taxonomy");
+
+export const getRelatedProducts = cached(async (product: { id: string; categoryId: string; brandId: string }) => {
   const related = await prisma.product.findMany({
     where: { status: "ACTIVE", id: { not: product.id }, categoryId: product.categoryId },
     include: productCardInclude,
@@ -173,7 +194,7 @@ export async function getRelatedProducts(product: { id: string; categoryId: stri
     take: 4 - related.length,
   });
   return [...related, ...more];
-}
+}, "related-products");
 
 export function primaryImage(product: { images: { url: string; isPrimary: boolean }[]; name?: string }) {
   return product.images.find((image) => image.isPrimary)?.url ?? product.images[0]?.url ?? null;

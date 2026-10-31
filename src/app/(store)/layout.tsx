@@ -2,17 +2,18 @@ import { Footer, WhatsAppButton } from "@/components/store/footer";
 import { Header } from "@/components/store/header";
 import { getCurrentUser } from "@/lib/auth";
 import { cartCount, getCart } from "@/lib/cart";
-import { prisma } from "@/lib/prisma";
+import { getNavTaxonomy } from "@/lib/catalog";
 import { getCurrency, getSettings } from "@/lib/settings";
 import { safe } from "@/lib/safe";
 
+// Header shows the visitor's cart, login and currency, so store pages render per request.
+// Catalog data itself is cached (see src/lib/cache.ts), so each request stays cheap.
 export const dynamic = "force-dynamic";
 
 export default async function StoreLayout({ children }: { children: React.ReactNode }) {
-  const [settings, brands, categories, cart, user, currency] = await Promise.all([
+  const [settings, { brands, categories }, cart, user, currency] = await Promise.all([
     getSettings(),
-    safe(prisma.brand.findMany({ orderBy: { sortOrder: "asc" }, select: { name: true, slug: true } }), [], "layout brands"),
-    safe(prisma.category.findMany({ orderBy: { sortOrder: "asc" }, select: { name: true, slug: true } }), [], "layout categories"),
+    safe(getNavTaxonomy(), { brands: [], categories: [] }, "layout taxonomy"),
     safe(getCart(), null, "layout cart"),
     safe(getCurrentUser(), null, "layout user"),
     getCurrency(),

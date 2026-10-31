@@ -1,3 +1,5 @@
+import { cached } from "@/lib/cache";
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 
 export const settingDefaults = {
@@ -19,7 +21,7 @@ export const settingDefaults = {
 
 export type SettingKey = keyof typeof settingDefaults;
 
-export async function getSettings() {
+export const getSettings = cached(async () => {
   let rows: { key: string; value: string }[] = [];
   try {
     rows = await prisma.siteSetting.findMany();
@@ -32,10 +34,9 @@ export async function getSettings() {
     ...merged,
     prepaidDiscount: Number(merged.prepaidDiscount) || 0,
   };
-}
+}, "site-settings");
 
 export async function getCurrency(): Promise<"INR" | "USD"> {
-  const { cookies } = await import("next/headers");
   const value = (await cookies()).get("sww_currency")?.value;
   return value === "USD" ? "USD" : "INR";
 }

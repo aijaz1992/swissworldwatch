@@ -2,6 +2,7 @@ import { CategoryImage } from "@/components/store/category-image";
 import { BrandMarquee } from "@/components/store/brand-marquee";
 import { HeroVideo } from "@/components/store/hero-video";
 import { ProductCard } from "@/components/store/product-card";
+import { cached } from "@/lib/cache";
 import { productCardInclude } from "@/lib/catalog";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
@@ -9,23 +10,35 @@ import { safe } from "@/lib/safe";
 import Image from "next/image";
 import Link from "next/link";
 
-export default async function HomePage() {
-  const [settings, signature, sale, brands, categories] = await Promise.all([
-    getSettings(),
-    safe(prisma.product.findMany({
+const getHomeData = cached(
+  () =>
+    Promise.all([
+      prisma.product.findMany({
       where: { status: "ACTIVE", featured: true },
       include: productCardInclude,
       orderBy: [{ bestSeller: "desc" }, { createdAt: "desc" }],
       take: 4,
-    }), [], "home products"),
-    safe(prisma.product.findMany({
+      }),
+      prisma.product.findMany({
       where: { status: "ACTIVE", NOT: { compareAtPrice: null } },
       include: productCardInclude,
       orderBy: { createdAt: "desc" },
       take: 12,
-    }), [], "home products"),
-    safe(prisma.brand.findMany({ where: { featured: true }, orderBy: { sortOrder: "asc" } }), [], "home brands"),
-    safe(prisma.category.findMany({ orderBy: { sortOrder: "asc" } }), [], "home categories"),
+      }),
+      prisma.brand.findMany({
+        where: { featured: true },
+        orderBy: { sortOrder: "asc" },
+        select: { id: true, name: true, slug: true, imageUrl: true },
+      }),
+      prisma.category.findMany({ orderBy: { sortOrder: "asc" }, select: { id: true, name: true, slug: true, imageUrl: true } }),
+    ]),
+  "home-data",
+);
+
+export default async function HomePage() {
+  const [settings, [signature, sale, brands, categories]] = await Promise.all([
+    getSettings(),
+    safe(getHomeData(), [[], [], [], []], "home data"),
   ]);
 
   const discounts = sale.filter((product) => (product.compareAtPrice ?? 0) > product.price).slice(0, 8);

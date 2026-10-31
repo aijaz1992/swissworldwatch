@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 
-export function slugify(input: string) {
+function slugify(input: string) {
   const slug = input
     .toLowerCase()
     .normalize("NFKD")
@@ -11,7 +11,7 @@ export function slugify(input: string) {
   return slug || "item";
 }
 
-export async function isPublicSlugTaken(slug: string, exceptProductId?: string) {
+async function isPublicSlugTaken(slug: string, exceptProductId?: string) {
   const [product, brand, category, collection] = await Promise.all([
     prisma.product.findUnique({ where: { slug }, select: { id: true } }),
     prisma.brand.findUnique({ where: { slug }, select: { id: true } }),

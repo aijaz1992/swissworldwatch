@@ -10,6 +10,8 @@ export default function GlobalError({ reset }: { error: Error & { digest?: strin
           <button onClick={reset} style={{ padding: "10px 18px", border: "1px solid #111", borderRadius: 6 }}>
             Try again
           </button>
+          {/* Full reload on purpose: the root layout failed. */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a href="/" style={{ padding: "10px 18px", border: "1px solid #111", borderRadius: 6 }}>
             Go to homepage
           </a>

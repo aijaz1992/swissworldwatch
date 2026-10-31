@@ -1,7 +1,6 @@
 import { Filters } from "@/components/store/filters";
 import { ProductGrid } from "@/components/store/product-card";
-import { filtersToQuery, queryProducts, type CatalogFilters } from "@/lib/catalog";
-import { prisma } from "@/lib/prisma";
+import { filtersToQuery, getNavTaxonomy, queryProducts, type CatalogFilters } from "@/lib/catalog";
 import Link from "next/link";
 
 export async function ProductListing({
@@ -13,11 +12,9 @@ export async function ProductListing({
   description?: string;
   filters: CatalogFilters;
 }) {
-  const [{ products, total, pageCount }, brands, categories] = await Promise.all([
-    queryProducts(filters),
-    prisma.brand.findMany({ orderBy: { name: "asc" }, select: { name: true, slug: true } }),
-    prisma.category.findMany({ orderBy: { sortOrder: "asc" }, select: { name: true, slug: true } }),
-  ]);
+  const [{ products, total, pageCount }, nav] = await Promise.all([queryProducts(filters), getNavTaxonomy()]);
+  const brands = [...nav.brands].sort((a, b) => a.name.localeCompare(b.name));
+  const categories = nav.categories;
   const clearable = Boolean(
     filters.q || filters.brand || filters.category || filters.gender || filters.min || filters.max || filters.availability || filters.sale || filters.movement,
   );
