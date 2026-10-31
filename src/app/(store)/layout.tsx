@@ -8,9 +8,10 @@ import { getCurrency, getSettings } from "@/lib/settings";
 export const dynamic = "force-dynamic";
 
 export default async function StoreLayout({ children }: { children: React.ReactNode }) {
-  const [settings, brands, cart, user, currency] = await Promise.all([
+  const [settings, brands, categories, cart, user, currency] = await Promise.all([
     getSettings(),
     prisma.brand.findMany({ orderBy: { sortOrder: "asc" }, select: { name: true, slug: true } }),
+    prisma.category.findMany({ orderBy: { sortOrder: "asc" }, select: { name: true, slug: true } }),
     getCart(),
     getCurrentUser(),
     getCurrency(),
@@ -23,6 +24,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
         phone={settings.phone}
         hours={settings.hours}
         brands={brands}
+        categories={categories}
         cartCount={cartCount(cart)}
         currency={currency}
         user={user ? { name: user.name, role: user.role } : null}
@@ -30,7 +32,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
       <main id="content" className="flex-1">
         {children}
       </main>
-      <Footer settings={settings} brands={brands} />
+      <Footer settings={settings} brands={brands} categories={categories} />
       <WhatsAppButton phone={settings.whatsapp} />
     </div>
   );

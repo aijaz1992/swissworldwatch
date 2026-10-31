@@ -1,3 +1,4 @@
+import { CategoryImage } from "@/components/store/category-image";
 import { BrandMarquee } from "@/components/store/brand-marquee";
 import { HeroVideo } from "@/components/store/hero-video";
 import { ProductCard } from "@/components/store/product-card";
@@ -123,14 +124,17 @@ export default async function HomePage() {
           </SectionHeading>
           <BrandMarquee brands={brands} />
           <h3 className="mt-12 text-2xl font-semibold tracking-tight">Shop by category</h3>
-          <div className="mt-5 flex flex-wrap gap-3">
+          <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
             {categories.map((category) => (
               <Link
                 key={category.id}
                 href={`/watches/${category.slug}`}
-                className="border border-ink/15 bg-white px-5 py-3 text-base hover:border-sky hover:text-sky"
+                className="group block border border-ink/10 bg-white hover:border-sky"
               >
-                {category.name}
+                <div className="relative aspect-square overflow-hidden bg-neutral-100">
+                  <CategoryImage src={category.imageUrl} name={category.name} sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 200px" />
+                </div>
+                <span className="block px-3 py-2.5 text-center text-base group-hover:text-sky">{category.name}</span>
               </Link>
             ))}
           </div>

@@ -233,6 +233,23 @@ export async function deleteBrand(formData: FormData) {
   revalidatePath("/", "layout");
 }
 
+async function readCategoryImage(formData: FormData, current: string | null = null) {
+  if (formData.get("removeImage") === "on") return null;
+  const file = formData.get("imageFile");
+  if (file instanceof File && file.size > 0) {
+    const [url] = await saveUploadedImages([file]);
+    if (url) return url;
+  }
+  const typed = String(formData.get("imageUrl") ?? "").trim();
+  if (typed) {
+    if (!typed.startsWith("/") && !/^https:\/\//i.test(typed)) {
+      throw new Error("Image link must start with https://");
+    }
+    return typed;
+  }
+  return current;
+}
+
 export async function createCategory(_prev: FormState, formData: FormData): Promise<FormState> {
   await requireAdmin();
   const parsed = nameSchema.safeParse({
@@ -240,9 +257,52 @@ export async function createCategory(_prev: FormState, formData: FormData): Prom
     description: formData.get("description"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
+  let imageUrl: string | null;
+  try {
+    imageUrl = await readCategoryImage(formData);
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Could not save the image." };
+  }
   const slug = await uniquePublicSlug(parsed.data.name);
+  const last = await prisma.category.aggregate({ _max: { sortOrder: true } });
   await prisma.category.create({
-    data: { name: parsed.data.name, slug, description: parsed.data.description ?? "" },
+    data: {
+      name: parsed.data.name,
+      slug,
+      description: parsed.data.description ?? "",
+      imageUrl,
+      sortOrder: (last._max.sortOrder ?? 0) + 1,
+    },
+  });
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function updateCategory(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  const existing = await prisma.category.findUnique({ where: { id } });
+  if (!existing) return { error: "Category not found." };
+  const parsed = nameSchema.safeParse({
+    name: formData.get("name"),
+    description: formData.get("description"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message };
+  let imageUrl: string | null;
+  try {
+    imageUrl = await readCategoryImage(formData, existing.imageUrl);
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Could not save the image." };
+  }
+  const sortOrder = Number.parseInt(String(formData.get("sortOrder") ?? ""), 10);
+  await prisma.category.update({
+    where: { id },
+    data: {
+      name: parsed.data.name,
+      description: parsed.data.description ?? "",
+      imageUrl,
+      ...(Number.isFinite(sortOrder) ? { sortOrder } : {}),
+    },
   });
   revalidatePath("/", "layout");
   return { ok: true };

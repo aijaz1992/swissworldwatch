@@ -1,4 +1,5 @@
-import { createBrand, createCategory, createCollection, deleteBrand, deleteCategory, deleteCollection } from "@/actions/admin";
+import { createBrand, createCategory, createCollection, deleteBrand, deleteCategory, deleteCollection, updateCategory } from "@/actions/admin";
+import { CategoryForm } from "@/components/admin/category-form";
 import { ConfirmButton } from "@/components/admin/confirm-button";
 import { TaxonomyForm } from "@/components/admin/taxonomy-form";
 import { prisma } from "@/lib/prisma";
@@ -40,18 +41,33 @@ export default async function CategoriesPage({ searchParams }: { searchParams: P
         <Panel title="Categories">
           <ul className="space-y-2 text-sm">
             {categories.map((category) => (
-              <li key={category.id} className="flex items-center justify-between gap-3 border-b border-neutral-100 py-2">
-                <span>
-                  {category.name} <span className="text-neutral-400">({category._count.products})</span>
-                </span>
-                <form action={deleteCategory}>
-                  <input type="hidden" name="id" value={category.id} />
-                  <ConfirmButton label="Delete" message={`Delete ${category.name}?`} className="text-sale" />
-                </form>
+              <li key={category.id} className="border-b border-neutral-100 py-2">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="flex items-center gap-3">
+                    {category.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={category.imageUrl} alt="" className="h-10 w-10 shrink-0 object-cover" />
+                    ) : (
+                      <span className="grid h-10 w-10 shrink-0 place-items-center bg-neutral-100 text-xs text-neutral-400">No img</span>
+                    )}
+                    <span>
+                      {category.name} <span className="text-neutral-400">({category._count.products})</span>
+                    </span>
+                  </span>
+                  <form action={deleteCategory}>
+                    <input type="hidden" name="id" value={category.id} />
+                    <ConfirmButton label="Delete" message={`Delete ${category.name}?`} className="text-sale" />
+                  </form>
+                </div>
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-sky">Edit</summary>
+                  <CategoryForm action={updateCategory} category={category} />
+                </details>
               </li>
             ))}
           </ul>
-          <TaxonomyForm action={createCategory} label="Category name" />
+          <h3 className="mt-4 text-sm font-semibold">Add a category</h3>
+          <CategoryForm action={createCategory} />
         </Panel>
         <Panel title="Collections">
           <ul className="space-y-2 text-sm">

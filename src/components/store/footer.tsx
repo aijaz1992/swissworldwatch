@@ -6,6 +6,7 @@ const hubs = ["Delhi", "Bangalore", "Pune", "Surat", "Ahmedabad", "Kolkata", "Hy
 export function Footer({
   settings,
   brands,
+  categories = [],
 }: {
   settings: {
     phone: string;
@@ -16,6 +17,7 @@ export function Footer({
     telegram: string;
   };
   brands: { name: string; slug: string }[];
+  categories?: { name: string; slug: string }[];
 }) {
   return (
     <footer className="mt-8 bg-ink text-neutral-300">
@@ -69,6 +71,11 @@ export function Footer({
               {brand.name}
             </FooterLink>
           ))}
+          {categories.map((category) => (
+            <FooterLink key={category.slug} href={`/watches/${category.slug}`}>
+              {category.name}
+            </FooterLink>
+          ))}
           <FooterLink href="/watches?gender=MEN">Men&apos;s Watches</FooterLink>
           <FooterLink href="/watches?gender=WOMEN">Women&apos;s Watches</FooterLink>
           <FooterLink href="/watches?sale=1">Sale</FooterLink>
@@ -113,7 +120,7 @@ function FooterColumn({ title, children }: { title: string; children: React.Reac
 
 function FooterLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <Link href={href} className="hover:text-[#d4b06a]">
+    <Link href={href} className="py-0.5 outline-none transition-colors hover:text-[#d4b06a] focus-visible:text-[#d4b06a] focus-visible:underline focus-visible:underline-offset-4">
       {children}
     </Link>
   );
@@ -127,7 +134,7 @@ export function WhatsAppButton({ phone }: { phone: string }) {
       target="_blank"
       rel="noreferrer"
       aria-label="Chat on WhatsApp"
-      className="fixed bottom-5 right-4 z-50 grid h-14 w-14 place-items-center rounded-full bg-[#25d366] text-white shadow-lg"
+      className="fixed bottom-5 right-4 z-40 grid h-14 w-14 place-items-center rounded-full bg-[#25d366] text-white shadow-lg"
     >
       <svg viewBox="0 0 24 24" className="h-8 w-8" fill="currentColor" aria-hidden>
         <path d="M12.04 2C6.58 2 2.15 6.4 2.15 11.83c0 1.74.46 3.44 1.34 4.94L2 22l5.39-1.4a10 10 0 0 0 4.65 1.18h.01c5.46 0 9.89-4.4 9.89-9.83C21.94 6.4 17.5 2 12.04 2zm5.76 14.15c-.24.68-1.4 1.3-1.94 1.38-.5.07-1.12.1-1.81-.11-.41-.13-.95-.31-1.64-.61-2.89-1.25-4.77-4.16-4.91-4.35-.14-.19-1.17-1.55-1.17-2.96s.74-2.1 1-2.39c.24-.27.64-.39.96-.39h.23c.22 0 .51-.04.78.6.28.68.96 2.34 1.04 2.51.08.17.14.37.03.58-.1.22-.16.35-.31.54-.16.19-.33.42-.47.56-.16.16-.32.33-.14.64.19.31.83 1.37 1.79 2.22 1.23 1.09 2.27 1.43 2.59 1.59.32.16.51.13.7-.08.19-.22.8-.93 1.02-1.25.21-.32.43-.26.72-.16.29.1 1.84.87 2.16 1.03.32.16.53.24.61.37.08.13.08.76-.16 1.44z" />

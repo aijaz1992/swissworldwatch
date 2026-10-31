@@ -13,6 +13,7 @@ export function Header({
   phone,
   hours,
   brands,
+  categories = [],
   cartCount,
   user,
   currency,
@@ -21,6 +22,7 @@ export function Header({
   phone: string;
   hours: string;
   brands: LinkItem[];
+  categories?: LinkItem[];
   cartCount: number;
   user: { name: string; role: "USER" | "ADMIN" } | null;
   currency: Currency;
@@ -125,9 +127,9 @@ export function Header({
       </div>
 
       {menuOpen && (
-        <div className="fixed inset-0 z-50 xl:hidden">
+        <div className="fixed inset-0 z-[60] xl:hidden" data-mobile-menu>
           <button className="absolute inset-0 bg-black/40" aria-label="Close menu" onClick={() => setMenuOpen(false)} />
-          <nav className="absolute left-0 top-0 flex h-full w-[min(100%,320px)] flex-col gap-1 overflow-y-auto bg-white p-5 shadow-xl" aria-label="Mobile">
+          <nav className="absolute left-0 top-0 flex h-full w-[min(100%,320px)] flex-col gap-0.5 overflow-y-auto overscroll-contain bg-white p-5 pb-24 shadow-xl" aria-label="Mobile">
             <div className="mb-3 flex items-center justify-between">
               <BrandLogo className="w-[120px]" />
               <button onClick={() => setMenuOpen(false)} aria-label="Close menu" className="text-2xl leading-none">
@@ -149,6 +151,16 @@ export function Header({
             <MobileLink href="/watches?sale=1" onClick={() => setMenuOpen(false)}>
               Sale
             </MobileLink>
+            {categories.length > 0 && (
+              <>
+                <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-neutral-400">Categories</p>
+                {categories.map((category) => (
+                  <MobileLink key={category.slug} href={`/watches/${category.slug}`} onClick={() => setMenuOpen(false)}>
+                    {category.name}
+                  </MobileLink>
+                ))}
+              </>
+            )}
             <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-neutral-400">Brands</p>
             {brands.map((brand) => (
               <MobileLink key={brand.slug} href={`/watches/${brand.slug}`} onClick={() => setMenuOpen(false)}>
@@ -246,7 +258,11 @@ function SearchButton({ open, onToggle }: { open: boolean; onToggle: () => void 
 
 function MobileLink({ href, children, onClick }: { href: string; children: React.ReactNode; onClick: () => void }) {
   return (
-    <Link href={href} onClick={onClick} className="py-2 text-sm text-neutral-800">
+    <Link
+      href={href}
+      onClick={onClick}
+      className="-mx-2 rounded-sm px-2 py-1.5 text-sm text-neutral-800 outline-none transition-colors hover:bg-[#d4b06a]/10 hover:text-[#a8843f] focus-visible:bg-[#d4b06a]/10 focus-visible:text-[#a8843f] focus-visible:ring-1 focus-visible:ring-[#d4b06a]/60"
+    >
       {children}
     </Link>
   );
