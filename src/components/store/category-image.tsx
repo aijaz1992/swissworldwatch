@@ -4,9 +4,9 @@ import Image from "next/image";
 export function CategoryImage({ src, name, sizes }: { src: string | null; name: string; sizes: string }) {
   if (!src) {
     return (
-      <div className="absolute inset-0 grid place-items-center bg-gradient-to-br from-ink to-[#1b2a3d]">
-        <span className="font-serif text-4xl text-[#d4b06a]/80" aria-hidden>
-          {name.trim().charAt(0).toUpperCase()}
+      <div className="absolute inset-0 grid place-items-center bg-gradient-to-br from-ink to-[#1b2a3d] p-3">
+        <span className="text-center font-display text-lg uppercase leading-tight tracking-[0.12em] text-[#d4b06a] sm:text-xl" aria-hidden>
+          {name.trim()}
         </span>
       </div>
     );

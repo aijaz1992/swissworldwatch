@@ -32,13 +32,19 @@ export async function loginAction(_prev: FormState, formData: FormData): Promise
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
 
-  const user = await prisma.user.findUnique({ where: { email: parsed.data.email.toLowerCase() } });
+  let user: Awaited<ReturnType<typeof prisma.user.findUnique>>;
+  try {
+    user = await prisma.user.findUnique({ where: { email: parsed.data.email.toLowerCase() } });
+  } catch (error) {
+    console.error("[store] login lookup failed", error);
+    return { error: "We could not sign you in right now. Please try again in a moment." };
+  }
   if (!user || !(await compare(parsed.data.password, user.passwordHash))) {
     return { error: "Those details don't match an account." };
   }
 
   await createSession(user);
-  await attachGuestCart(user.id);
+  await attachGuestCart(user.id).catch((error) => console.error("[store] attachGuestCart failed", error));
   redirect(safeNextPath(formData.get("next"), user.role === "ADMIN" ? "/admin" : "/account"));
 }
 
@@ -51,20 +57,28 @@ export async function registerAction(_prev: FormState, formData: FormData): Prom
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
 
   const email = parsed.data.email.toLowerCase();
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) return { error: "An account with that email already exists." };
-
-  const user = await prisma.user.create({
-    data: {
-      name: parsed.data.name,
-      email,
-      passwordHash: await hash(parsed.data.password, 10),
-      role: "USER",
-    },
-  });
+  let user;
+  try {
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) return { error: "An account with that email already exists." };
+    user = await prisma.user.create({
+      data: {
+        name: parsed.data.name,
+        email,
+        passwordHash: await hash(parsed.data.password, 10),
+        role: "USER",
+      },
+    });
+  } catch (error) {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {
+      return { error: "An account with that email already exists." };
+    }
+    console.error("[store] register failed", error);
+    return { error: "We could not create your account right now. Please try again in a moment." };
+  }
 
   await createSession(user);
-  await attachGuestCart(user.id);
+  await attachGuestCart(user.id).catch((error) => console.error("[store] attachGuestCart failed", error));
   redirect("/account");
 }
 
@@ -108,7 +122,11 @@ async function writeCartQuantity(productId: string, quantity: number, mode: "add
 export async function addToCart(formData: FormData) {
   const productId = String(formData.get("productId") ?? "");
   const quantity = Math.max(1, Number(formData.get("quantity") ?? 1) || 1);
-  await writeCartQuantity(productId, quantity, "add");
+  try {
+    await writeCartQuantity(productId, quantity, "add");
+  } catch (error) {
+    console.error("[store] addToCart failed", error);
+  }
 }
 
 export async function buyNow(formData: FormData) {
@@ -200,8 +218,9 @@ export async function placeOrder(_prev: FormState, formData: FormData): Promise<
       : 0;
   const total = subtotal - discount;
 
+  let orderNumber: string;
   try {
-    const orderNumber = await prisma.$transaction(async (tx) => {
+    orderNumber = await prisma.$transaction(async (tx) => {
       for (const item of activeItems) {
         if (item.quantity > item.product.stock) {
           throw new CheckoutError(`Only ${item.product.stock} left for ${item.product.name}.`);
@@ -265,12 +284,14 @@ export async function placeOrder(_prev: FormState, formData: FormData): Promise<
       return number;
     });
 
-    refreshCatalog();
-    redirect(`/checkout/success/${orderNumber}`);
   } catch (error) {
     if (error instanceof CheckoutError) return { error: error.message };
-    throw error;
+    console.error("[store] placeOrder failed", error);
+    return { error: "We could not place your order. Please try again in a moment, or message us on WhatsApp for help." };
   }
+
+  refreshCatalog();
+  redirect(`/checkout/success/${orderNumber}`);
 }
 
 const upiReferenceSchema = z.object({

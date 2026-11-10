@@ -101,12 +101,13 @@ async function main() {
 
   await prisma.user.upsert({
     where: { email: "admin@swissworldwatch.com" },
-    update: { passwordHash: password, role: "ADMIN", name: "Store Admin" },
+    // Runs on every deploy: never overwrite an existing password, or a changed admin password would reset to the default.
+    update: { role: "ADMIN" },
     create: { email: "admin@swissworldwatch.com", name: "Store Admin", passwordHash: password, role: "ADMIN" },
   });
   await prisma.user.upsert({
     where: { email: "customer@swissworldwatch.com" },
-    update: { passwordHash: customerPassword, role: "USER", name: "Asha Mehta" },
+    update: {},
     create: { email: "customer@swissworldwatch.com", name: "Asha Mehta", passwordHash: customerPassword, role: "USER" },
   });
 

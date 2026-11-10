@@ -14,7 +14,7 @@ export function Gallery({ images, name }: { images: { id: string; url: string; a
   return (
     <div>
       <div className="relative aspect-square overflow-hidden bg-neutral-100">
-        <Image src={current.url} alt={current.alt || name} fill priority sizes="(max-width: 1024px) 100vw, 50vw" className="object-cover" />
+        <Image src={current.url} alt={current.alt || name} fill preload sizes="(max-width: 1024px) 100vw, 600px" className="object-cover" />
       </div>
       {images.length > 1 && (
         <div className="mt-3 flex gap-2 overflow-x-auto">

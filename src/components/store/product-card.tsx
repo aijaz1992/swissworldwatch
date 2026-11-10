@@ -6,7 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { SubmitButton } from "@/components/store/submit-button";
 
-export async function ProductCard({ product }: { product: ProductCardData }) {
+export async function ProductCard({ product, preload = false }: { product: ProductCardData; preload?: boolean }) {
   const currency = await getCurrency();
   const image = primaryImage(product);
   const discount = discountPercent(product.price, product.compareAtPrice);
@@ -21,7 +21,8 @@ export async function ProductCard({ product }: { product: ProductCardData }) {
               src={image}
               alt={product.name}
               fill
-              sizes="(max-width: 640px) 50vw, 25vw"
+              preload={preload}
+              sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 300px"
               className="object-cover transition duration-300 group-hover:scale-[1.04]"
             />
           ) : (
@@ -78,8 +79,8 @@ export function ProductGrid({ products }: { products: ProductCardData[] }) {
 
   return (
     <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3 xl:grid-cols-4">
-      {products.map((product) => (
-        <ProductCard key={product.id} product={product} />
+      {products.map((product, index) => (
+        <ProductCard key={product.id} product={product} preload={index < 2} />
       ))}
     </div>
   );

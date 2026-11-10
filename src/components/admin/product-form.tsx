@@ -2,6 +2,7 @@
 
 import { createProduct, updateProduct, type FormState } from "@/actions/admin";
 import { SubmitButton } from "@/components/store/submit-button";
+import { prepareImageUploads } from "@/lib/client-images";
 import Image from "next/image";
 import { useActionState, useState } from "react";
 
@@ -47,7 +48,11 @@ export function ProductForm({
   product?: ProductInput;
 }) {
   const action = product ? updateProduct : createProduct;
-  const [state, formAction] = useActionState<FormState, FormData>(action, {});
+  const [state, formAction] = useActionState<FormState, FormData>(async (prev, formData) => {
+    const tooLarge = await prepareImageUploads(formData, ["images"]);
+    if (tooLarge) return { error: tooLarge };
+    return action(prev, formData);
+  }, {});
   const [specs, setSpecs] = useState(product?.specs.length ? product.specs : [{ label: "", value: "" }]);
 
   return (

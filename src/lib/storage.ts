@@ -6,14 +6,17 @@ const ALLOWED = new Map([
   ["image/webp", ".webp"],
 ]);
 
+/** An expected, user-fixable upload problem (wrong type, too large). Safe to show to the admin. */
+export class ImageUploadError extends Error {}
+
 async function saveUploadedImage(file: File) {
   if (!file || file.size === 0) return null;
   const extension = ALLOWED.get(file.type);
   if (!extension) {
-    throw new Error("Use a JPG, PNG, or WebP image.");
+    throw new ImageUploadError("Use a JPG, PNG, or WebP image.");
   }
   if (file.size > 5 * 1024 * 1024) {
-    throw new Error("Images must be 5MB or smaller.");
+    throw new ImageUploadError("Images must be 5MB or smaller.");
   }
 
   const row = await prisma.mediaFile.create({

@@ -4,7 +4,7 @@ import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { settingDefaults, type SettingKey } from "@/lib/settings";
 import { uniquePublicSlug } from "@/lib/slug";
-import { saveUploadedImages } from "@/lib/storage";
+import { ImageUploadError, saveUploadedImages } from "@/lib/storage";
 import type { Gender, OrderStatus, ProductStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { refreshCatalog } from "@/lib/cache";
@@ -126,11 +126,11 @@ export async function createProduct(_prev: FormState, formData: FormData): Promi
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
   const built = productData(parsed.data, formData);
   if ("error" in built && built.error) return { error: built.error };
-
-  const slug = await uniquePublicSlug(parsed.data.name);
   if (!built.data) return { error: "Could not read the product." };
 
+  let createdId: string | null = null;
   try {
+    const slug = await uniquePublicSlug(parsed.data.name);
     const product = await prisma.product.create({
       data: {
         ...built.data,
@@ -138,15 +138,18 @@ export async function createProduct(_prev: FormState, formData: FormData): Promi
         specs: { create: readSpecs(formData) },
       },
     });
+    createdId = product.id;
     const images = await syncImages(product.id, formData, product.name);
     if (images.error) {
       await prisma.product.delete({ where: { id: product.id } });
       return { error: images.error };
     }
   } catch (error) {
+    // Roll back the half-created watch (this request's own new row only) so a retry does not hit "SKU in use".
+    if (createdId) await prisma.product.delete({ where: { id: createdId } }).catch(() => undefined);
     if (isUnique(error)) return { error: "That SKU or name is already in use." };
-    if (error instanceof Error && /image/i.test(error.message)) return { error: error.message };
-    throw error;
+    if (error instanceof ImageUploadError) return { error: error.message };
+    return unexpected("createProduct", error, "Could not save the watch. Please try again.");
   }
 
   refreshCatalog();
@@ -156,22 +159,18 @@ export async function createProduct(_prev: FormState, formData: FormData): Promi
 export async function updateProduct(_prev: FormState, formData: FormData): Promise<FormState> {
   await requireAdmin();
   const id = String(formData.get("id") ?? "");
-  const existing = await prisma.product.findUnique({ where: { id } });
-  if (!existing) return { error: "Product not found." };
-
   const parsed = productSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
   const built = productData(parsed.data, formData);
   if ("error" in built && built.error) return { error: built.error };
 
-  const slug =
-    formData.get("regenerateSlug") === "on"
-      ? await uniquePublicSlug(parsed.data.name, existing.id)
-      : existing.slug;
-
   if (!built.data) return { error: "Could not read the product." };
 
   try {
+    const existing = await prisma.product.findUnique({ where: { id }, select: { id: true, slug: true } });
+    if (!existing) return { error: "Product not found." };
+    const slug =
+      formData.get("regenerateSlug") === "on" ? await uniquePublicSlug(parsed.data.name, existing.id) : existing.slug;
     await prisma.product.update({
       where: { id },
       data: {
@@ -184,8 +183,8 @@ export async function updateProduct(_prev: FormState, formData: FormData): Promi
     if (images.error) return { error: images.error };
   } catch (error) {
     if (isUnique(error)) return { error: "That SKU is already in use." };
-    if (error instanceof Error) return { error: error.message };
-    throw error;
+    if (error instanceof ImageUploadError) return { error: error.message };
+    return unexpected("updateProduct", error, "Could not save the watch. Please try again.");
   }
 
   refreshCatalog();
@@ -212,15 +211,20 @@ export async function createBrand(_prev: FormState, formData: FormData): Promise
     description: formData.get("description"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
-  const slug = await uniquePublicSlug(parsed.data.name);
-  await prisma.brand.create({
-    data: {
-      name: parsed.data.name,
-      slug,
-      description: parsed.data.description ?? "",
-      featured: formData.get("featured") === "on",
-    },
-  });
+  try {
+    const slug = await uniquePublicSlug(parsed.data.name);
+    await prisma.brand.create({
+      data: {
+        name: parsed.data.name,
+        slug,
+        description: parsed.data.description ?? "",
+        featured: formData.get("featured") === "on",
+      },
+    });
+  } catch (error) {
+    if (isUnique(error)) return { error: "That name is already in use." };
+    return unexpected("createBrand", error);
+  }
   refreshCatalog();
   return { ok: true };
 }
@@ -244,7 +248,7 @@ async function readCategoryImage(formData: FormData, current: string | null = nu
   const typed = String(formData.get("imageUrl") ?? "").trim();
   if (typed) {
     if (!typed.startsWith("/") && !/^https:\/\//i.test(typed)) {
-      throw new Error("Image link must start with https://");
+      throw new ImageUploadError("Image link must start with https://");
     }
     return typed;
   }
@@ -262,19 +266,25 @@ export async function createCategory(_prev: FormState, formData: FormData): Prom
   try {
     imageUrl = await readCategoryImage(formData);
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "Could not save the image." };
+    if (error instanceof ImageUploadError) return { error: error.message };
+    return unexpected("createCategory image", error, "Could not save the image. Please try again.");
   }
-  const slug = await uniquePublicSlug(parsed.data.name);
-  const last = await prisma.category.aggregate({ _max: { sortOrder: true } });
-  await prisma.category.create({
-    data: {
-      name: parsed.data.name,
-      slug,
-      description: parsed.data.description ?? "",
-      imageUrl,
-      sortOrder: (last._max.sortOrder ?? 0) + 1,
-    },
-  });
+  try {
+    const slug = await uniquePublicSlug(parsed.data.name);
+    const last = await prisma.category.aggregate({ _max: { sortOrder: true } });
+    await prisma.category.create({
+      data: {
+        name: parsed.data.name,
+        slug,
+        description: parsed.data.description ?? "",
+        imageUrl,
+        sortOrder: (last._max.sortOrder ?? 0) + 1,
+      },
+    });
+  } catch (error) {
+    if (isUnique(error)) return { error: "That name is already in use." };
+    return unexpected("createCategory", error);
+  }
   refreshCatalog();
   return { ok: true };
 }
@@ -282,29 +292,39 @@ export async function createCategory(_prev: FormState, formData: FormData): Prom
 export async function updateCategory(_prev: FormState, formData: FormData): Promise<FormState> {
   await requireAdmin();
   const id = String(formData.get("id") ?? "");
-  const existing = await prisma.category.findUnique({ where: { id } });
-  if (!existing) return { error: "Category not found." };
   const parsed = nameSchema.safeParse({
     name: formData.get("name"),
     description: formData.get("description"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
+  let existing: { imageUrl: string | null } | null;
+  try {
+    existing = await prisma.category.findUnique({ where: { id }, select: { imageUrl: true } });
+  } catch (error) {
+    return unexpected("updateCategory lookup", error);
+  }
+  if (!existing) return { error: "Category not found." };
   let imageUrl: string | null;
   try {
     imageUrl = await readCategoryImage(formData, existing.imageUrl);
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "Could not save the image." };
+    if (error instanceof ImageUploadError) return { error: error.message };
+    return unexpected("updateCategory image", error, "Could not save the image. Please try again.");
   }
   const sortOrder = Number.parseInt(String(formData.get("sortOrder") ?? ""), 10);
-  await prisma.category.update({
-    where: { id },
-    data: {
-      name: parsed.data.name,
-      description: parsed.data.description ?? "",
-      imageUrl,
-      ...(Number.isFinite(sortOrder) ? { sortOrder } : {}),
-    },
-  });
+  try {
+    await prisma.category.update({
+      where: { id },
+      data: {
+        name: parsed.data.name,
+        description: parsed.data.description ?? "",
+        imageUrl,
+        ...(Number.isFinite(sortOrder) ? { sortOrder } : {}),
+      },
+    });
+  } catch (error) {
+    return unexpected("updateCategory", error);
+  }
   refreshCatalog();
   return { ok: true };
 }
@@ -325,10 +345,15 @@ export async function createCollection(_prev: FormState, formData: FormData): Pr
     description: formData.get("description"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
-  const slug = await uniquePublicSlug(parsed.data.name);
-  await prisma.collection.create({
-    data: { name: parsed.data.name, slug, description: parsed.data.description ?? "" },
-  });
+  try {
+    const slug = await uniquePublicSlug(parsed.data.name);
+    await prisma.collection.create({
+      data: { name: parsed.data.name, slug, description: parsed.data.description ?? "" },
+    });
+  } catch (error) {
+    if (isUnique(error)) return { error: "That name is already in use." };
+    return unexpected("createCollection", error);
+  }
   refreshCatalog();
   return { ok: true };
 }
@@ -360,8 +385,13 @@ export async function updateSettings(_prev: FormState, formData: FormData): Prom
   const heroFile = formData.get("heroImageFile");
   let heroImage = String(formData.get("heroImage") ?? "");
   if (heroFile instanceof File && heroFile.size > 0) {
-    const [uploaded] = await saveUploadedImages([heroFile]);
-    if (uploaded) heroImage = uploaded;
+    try {
+      const [uploaded] = await saveUploadedImages([heroFile]);
+      if (uploaded) heroImage = uploaded;
+    } catch (error) {
+      if (error instanceof ImageUploadError) return { error: error.message };
+      return unexpected("updateSettings image", error, "Could not save the hero image. Please try again.");
+    }
   }
 
   const values: Record<SettingKey, string> = {
@@ -381,18 +411,28 @@ export async function updateSettings(_prev: FormState, formData: FormData): Prom
     storeBlurb: String(formData.get("storeBlurb") ?? ""),
   };
 
-  await prisma.$transaction(
-    (Object.keys(values) as SettingKey[]).map((key) =>
-      prisma.siteSetting.upsert({
-        where: { key },
-        update: { value: values[key] },
-        create: { key, value: values[key] },
-      }),
-    ),
-  );
+  try {
+    await prisma.$transaction(
+      (Object.keys(values) as SettingKey[]).map((key) =>
+        prisma.siteSetting.upsert({
+          where: { key },
+          update: { value: values[key] },
+          create: { key, value: values[key] },
+        }),
+      ),
+    );
+  } catch (error) {
+    return unexpected("updateSettings", error);
+  }
 
   refreshCatalog();
   return { ok: true };
+}
+
+/** Logs an unexpected failure and returns a friendly form error instead of crashing the page. */
+function unexpected(label: string, error: unknown, message = "Could not save. Please try again."): FormState {
+  console.error(`[admin] ${label} failed`, error);
+  return { error: message };
 }
 
 function isUnique(error: unknown) {

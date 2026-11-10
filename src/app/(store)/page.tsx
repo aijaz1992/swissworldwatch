@@ -127,7 +127,14 @@ export default async function HomePage() {
           </Link>
         </div>
         <div className="relative min-h-[280px] overflow-hidden bg-ink sm:min-h-[360px]">
-          <Image src={settings.heroImage} alt="Swiss World Watch studio piece" fill className="object-cover opacity-90" sizes="(max-width: 1024px) 100vw, 45vw" />
+          <Image
+            src={settings.heroImage}
+            alt="Swiss World Watch studio piece"
+            fill
+            className="object-cover opacity-90"
+            sizes="(max-width: 1024px) 100vw, 560px"
+            unoptimized={!settings.heroImage.startsWith("/")}
+          />
         </div>
       </section>
 
@@ -180,7 +187,7 @@ export default async function HomePage() {
       </section>
 
       <section className="mx-auto max-w-[1240px] px-4 py-16">
-        <SectionHeading href="/watches">Rice collection</SectionHeading>
+        <SectionHeading href="/watches">Brand collection</SectionHeading>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
           {brands.map((brand) => (
             <Link key={`rice-${brand.id}`} href={`/watches/${brand.slug}`} className="border border-line px-4 py-8 text-center hover:border-sky">

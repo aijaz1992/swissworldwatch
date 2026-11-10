@@ -2,6 +2,7 @@
 
 import type { FormState } from "@/actions/admin";
 import { SubmitButton } from "@/components/store/submit-button";
+import { prepareImageUploads } from "@/lib/client-images";
 import { useActionState } from "react";
 
 type Category = { id: string; name: string; description: string; imageUrl: string | null; sortOrder: number };
@@ -13,7 +14,11 @@ export function CategoryForm({
   action: (state: FormState, formData: FormData) => Promise<FormState>;
   category?: Category;
 }) {
-  const [state, formAction] = useActionState(action, {});
+  const [state, formAction] = useActionState<FormState, FormData>(async (prev, formData) => {
+    const tooLarge = await prepareImageUploads(formData, ["imageFile"]);
+    if (tooLarge) return { error: tooLarge };
+    return action(prev, formData);
+  }, {});
   const external = category?.imageUrl && !category.imageUrl.startsWith("/media/") ? category.imageUrl : "";
   return (
     <form action={formAction} className="mt-3 space-y-2">

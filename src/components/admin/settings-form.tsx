@@ -2,10 +2,15 @@
 
 import { updateSettings, type FormState } from "@/actions/admin";
 import { SubmitButton } from "@/components/store/submit-button";
+import { prepareImageUploads } from "@/lib/client-images";
 import { useActionState } from "react";
 
 export function SettingsForm({ values }: { values: Record<string, string> }) {
-  const [state, action] = useActionState<FormState, FormData>(updateSettings, {});
+  const [state, action] = useActionState<FormState, FormData>(async (prev, formData) => {
+    const tooLarge = await prepareImageUploads(formData, ["heroImageFile"]);
+    if (tooLarge) return { error: tooLarge };
+    return updateSettings(prev, formData);
+  }, {});
   return (
     <form action={action} className="space-y-4 bg-white p-5 shadow-sm">
       {state.error && <p className="text-sm text-sale">{state.error}</p>}
